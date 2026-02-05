@@ -104,15 +104,15 @@ def get_board_items(previous_ids):
     data = response.json()
     items = data["data"]["boards"][0]["items_page"]["items"]
 
-    new_started_items = []
+    new_sent_items = []
 
     for item in items:
 
-        # if item["id"] in previous_ids:
-        #     continue
+        if item["id"] in previous_ids:
+            continue
 
         status_col = next((col for col in item["column_values"] if col["column"]["title"] == "Status"), None)
-        if not status_col or status_col["text"] != "Started":
+        if not status_col or status_col["text"] != "Sent":
             continue
 
         # Build a mapping of assetId to public_url
@@ -139,9 +139,9 @@ def get_board_items(previous_ids):
         item["old_picture_urls"] = old_picture_urls
         item["new_picture_urls"] = new_picture_urls
 
-        new_started_items.append(item)
+        new_sent_items.append(item)
 
-    return new_started_items
+    return new_sent_items
 
 # === Generate PDF ===
 def generate_pdf(data, filename):
@@ -492,8 +492,8 @@ def send_email_via_outlook(to, subject, body, attachment_path):
     logger.info("Email sent successfully via Outlook.")
 
 # === Save data for next run ===
-def save_new_ids(new_started_items, previous_ids, filename):
-    new_ids = [item["id"] for item in new_started_items if item["id"] not in previous_ids]
+def save_new_ids(new_items, previous_ids, filename):
+    new_ids = [item["id"] for item in new_items if item["id"] not in previous_ids]
 
     if not new_ids:
         logger.info("No new items to save.")
@@ -515,13 +515,13 @@ if __name__ == "__main__":
         logger.info("Loading previously saved item IDs...")
         previous_ids = load_previous_ids(PREVIOUS_DATA_FILE)
 
-        logger.info("Fetching current 'Started' items from Monday.com...")
-        new_started_items = get_board_items(previous_ids)
+        logger.info("Fetching current new 'Sent' items from Monday.com...")
+        new_sent_items = get_board_items(previous_ids)
 
-        if new_started_items:
-            logger.info(f"Found {len(new_started_items)} new 'Started' items.")
+        if new_sent_items:
+            logger.info(f"Found {len(new_sent_items)} new 'Sent' items.")
             
-            generate_pdf(new_started_items, PDF_OUTPUT_FILE)
+            generate_pdf(new_sent_items, PDF_OUTPUT_FILE)
 
             # send_email_via_outlook(
             #     to=EMAIL_TO,
@@ -530,10 +530,10 @@ if __name__ == "__main__":
             #     attachment_path=PDF_OUTPUT_FILE
             # )
 
-            save_new_ids(new_started_items, previous_ids, PREVIOUS_DATA_FILE)
+            save_new_ids(new_sent_items, previous_ids, PREVIOUS_DATA_FILE)
 
         else:
-            logger.info("No new started project found.")
+            logger.info("No new sent project found.")
 
     except Exception as e:
         logger.error(f"Error occurred: {e}")
