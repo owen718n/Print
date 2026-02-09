@@ -77,32 +77,42 @@ def load_previous_ids(filename):
 import json
 
 def get_board_items(previous_ids):
-    query = f"""
-    {{
-      boards(ids: [{BOARD_ID}]) {{
-        items_page(limit: 10) {{
-          items {{
-            id
-            name
-            column_values {{
-              column {{ title }}
-              text
-              value
-            }}
-            assets {{
-              id
-              name
-              public_url
+    items = []
+    cursor = None
+
+    while True:
+        cursor_part = f', cursor: "{cursor}"' if cursor else ""
+        query = f"""
+        {{
+          boards(ids: [{BOARD_ID}]) {{
+            items_page(limit: 100{cursor_part}) {{
+              cursor
+              items {{
+                id
+                name
+                column_values {{
+                  column {{ title }}
+                  text
+                  value
+                }}
+                assets {{
+                  id
+                  name
+                  public_url
+                }}
+              }}
             }}
           }}
         }}
-      }}
-    }}
-    """
-    response = requests.post(API_URL, json={"query": query}, headers=headers)
-    response.raise_for_status()
-    data = response.json()
-    items = data["data"]["boards"][0]["items_page"]["items"]
+        """
+        response = requests.post(API_URL, json={"query": query}, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        page = data["data"]["boards"][0]["items_page"]
+        items.extend(page["items"])
+        cursor = page.get("cursor")
+        if not cursor:
+            break
 
     new_sent_items = []
 
